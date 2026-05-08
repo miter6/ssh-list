@@ -193,11 +193,8 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
         || app.app_mode == AppMode::Import
         || app.app_mode == AppMode::Sort
     {
-        for (i, data) in app.ssh_connections.iter().enumerate() {
-            let color = match i % 2 {
-                0 => Color::Black,
-                _ => Color::Indexed(235),
-            };
+        for data in app.ssh_connections.iter() {
+            let color = Color::Black;
             let item = data.ref_array();
             if app.row_height == 3 {
                 let row = item
@@ -219,12 +216,9 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
             }
         }
     } else {
-        for (i, &index) in app.search_index.iter().enumerate() {
+        for &index in app.search_index.iter() {
             let data = &app.ssh_connections[index];
-            let color = match i % 2 {
-                0 => Color::Black,
-                _ => Color::Indexed(235),
-            };
+            let color = Color::Black;
             let item = data.ref_array();
             if app.row_height == 3 {
                 let row = item

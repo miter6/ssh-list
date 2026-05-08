@@ -10,8 +10,8 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 execute!(stdout(), Show).ok();
                 return false;
             }
-            KeyCode::Down | KeyCode::Tab => app.next_row(),
-            KeyCode::Up | KeyCode::BackTab => app.previous_row(),
+            KeyCode::Down | KeyCode::Tab | KeyCode::Char('j') => app.next_row(),
+            KeyCode::Up | KeyCode::BackTab | KeyCode::Char('k') => app.previous_row(),
             KeyCode::Enter => match app.table_state.selected() {
                 Some(_) => {
                     if check_openssh() {
