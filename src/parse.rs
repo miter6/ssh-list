@@ -1,7 +1,7 @@
 use crate::*;
 use glob::glob;
-use std::fs::File;
 use std::collections::HashMap;
+use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
@@ -9,9 +9,10 @@ use std::path::Path;
 pub struct SSHConfigConnection {
     server_name: String,
     username: String,
+    password: String,
     hostname: String,
     port: String,
-    options: Vec<(String, String)>, 
+    options: Vec<(String, String)>,
 }
 
 pub fn import_config(app: &mut App) {
@@ -45,7 +46,7 @@ pub fn import_config(app: &mut App) {
             get_names(&mut names, config);
         }
     }
-    
+
     parse_from_ssh(names, &mut sshconfig);
     compare_with_defaults(&mut sshconfig, default_output_object);
     add_to_appconfig(sshconfig, app);
@@ -79,11 +80,11 @@ pub fn get_sshconfig_path() -> PathBuf {
     config_dir_pathbuf
 }
 
-fn check_systemsshconfig_path(path:PathBuf) -> bool {
+fn check_systemsshconfig_path(path: PathBuf) -> bool {
     match fs::exists(&path) {
-        Ok(true)  => true,
-        Ok(false)  => false,
-        Err(_) => false
+        Ok(true) => true,
+        Ok(false) => false,
+        Err(_) => false,
     }
 }
 
@@ -107,7 +108,10 @@ fn get_names(names: &mut Vec<String>, config: BufReader<File>) {
         match line_result {
             Ok(line) => {
                 let line = line.split('#').next().unwrap().trim().replace("=", " ");
-                if !line.is_empty() && !line.starts_with('#') && line.to_lowercase().starts_with("host ") {
+                if !line.is_empty()
+                    && !line.starts_with('#')
+                    && line.to_lowercase().starts_with("host ")
+                {
                     let line = line.split_whitespace();
                     for part in line {
                         if !part.contains("*") && part.to_lowercase() != "host" {
@@ -131,12 +135,13 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
             let mut connection = SSHConfigConnection {
                 server_name: name.to_string(),
                 username: String::new(),
+                password: String::new(),
                 hostname: String::new(),
                 port: String::new(),
                 options: vec![],
             };
             for line in output.lines() {
-                if let Some((key,value)) = line.trim().split_once(' ') {
+                if let Some((key, value)) = line.trim().split_once(' ') {
                     let key = key.to_lowercase();
                     let value = value.to_string();
                     match key.as_str() {
@@ -144,23 +149,29 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
                         "user" => connection.username = value,
                         "hostname" => connection.hostname = value,
                         "port" => connection.port = value,
-                        _ => connection.options.push((key, value))
+                        _ => connection.options.push((key, value)),
                     }
                 }
             }
             sshconfig.push(connection);
         } else {
-            let output = Command::new("ssh").arg("-G").arg(name).arg("uptime").output().unwrap();
+            let output = Command::new("ssh")
+                .arg("-G")
+                .arg(name)
+                .arg("uptime")
+                .output()
+                .unwrap();
             let output = std::str::from_utf8(&output.stdout).unwrap();
             let mut connection = SSHConfigConnection {
                 server_name: name.to_string(),
                 username: String::new(),
+                password: String::new(),
                 hostname: String::new(),
                 port: String::new(),
                 options: vec![],
             };
             for line in output.lines() {
-                if let Some((key,value)) = line.trim().split_once(' ') {
+                if let Some((key, value)) = line.trim().split_once(' ') {
                     let key = key.to_lowercase();
                     let value = value.to_string();
                     match key.as_str() {
@@ -168,7 +179,7 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
                         "user" => connection.username = value,
                         "hostname" => connection.hostname = value,
                         "port" => connection.port = value,
-                        _ => connection.options.push((key, value))
+                        _ => connection.options.push((key, value)),
                     }
                 }
             }
@@ -177,7 +188,10 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
     }
 }
 
-fn compare_with_defaults(sshconfig: &mut Vec<SSHConfigConnection>, default_output_object: SSHConfigConnection) {
+fn compare_with_defaults(
+    sshconfig: &mut Vec<SSHConfigConnection>,
+    default_output_object: SSHConfigConnection,
+) {
     for config in sshconfig {
         let mut new_options: Vec<(String, String)> = vec![];
         for option in &config.options {
@@ -236,14 +250,20 @@ fn get_options(option: &str, value: &str) -> String {
         ("identityagent", "IdentityAgent"),
         ("ignoreunknown", "IgnoreUnknown"),
         ("ipqos", "IPQoS"),
-        ("kbdinteractiveauthentication", "KbdInteractiveAuthentication"),
+        (
+            "kbdinteractiveauthentication",
+            "KbdInteractiveAuthentication",
+        ),
         ("kbdinteractivedevices", "KbdInteractiveDevices"),
         ("kexalgorithms", "KexAlgorithms"),
         ("knownhostscommand", "KnownHostsCommand"),
         ("loglevel", "LogLevel"),
         ("logverbose", "LogVerbose"),
         ("macs", "MACs"),
-        ("nohostauthenticationforlocalhost", "NoHostAuthenticationForLocalhost"),
+        (
+            "nohostauthenticationforlocalhost",
+            "NoHostAuthenticationForLocalhost",
+        ),
         ("numberofpasswordprompts", "NumberOfPasswordPrompts"),
         ("obscurekeystroketiming", "ObscureKeystrokeTiming"),
         ("passwordauthentication", "PasswordAuthentication"),
@@ -295,20 +315,24 @@ fn get_options(option: &str, value: &str) -> String {
                 let port = line.next().unwrap_or_default();
                 format!("-R {} ", port)
             }
-        },
+        }
         "remoteforward" => {
             let mut line = value.split_whitespace();
             let port = line.next().unwrap_or_default();
             let address = line.next().unwrap_or_default();
             format!("-L {}:{} ", port, address)
-        },
+        }
         "dynamicforward" => format!("-D {} ", value),
         "identityfile" => format!("-i {} ", value),
         "localcommand" => format!("-o LocalCommand='{}' ", value),
         "proxycommand" => format!("-o ProxyCommand='{}' ", value),
         "proxyjump" => format!("-J {} ", value),
         "remotecommand" => format!("-o RemoteCommand='{}' ", value),
-        _ => format!("-o {}={} ", options_hashmap.get(option).unwrap_or(&option), value)
+        _ => format!(
+            "-o {}={} ",
+            options_hashmap.get(option).unwrap_or(&option),
+            value
+        ),
     }
 }
 
@@ -323,6 +347,7 @@ fn add_to_appconfig(sshconfig: Vec<SSHConfigConnection>, app: &mut App) {
             server_name: connection.server_name,
             group_name: String::new(),
             username: connection.username,
+            password: connection.password,
             hostname: connection.hostname,
             port: connection.port,
             options: all_options,
@@ -340,7 +365,10 @@ fn get_includes(ssh_config_paths: &mut Vec<PathBuf>, config: BufReader<File>) {
                     .trim()
                     .replace("=", " ")
                     .replace("~", &homedir.display().to_string());
-                if !line.is_empty() && !line.starts_with('#') && line.to_lowercase().starts_with("include ") {
+                if !line.is_empty()
+                    && !line.starts_with('#')
+                    && line.to_lowercase().starts_with("include ")
+                {
                     let line = line.split_whitespace();
                     for part in line {
                         if part.to_lowercase() != "include" {

@@ -21,7 +21,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                         return false;
                     } else {
                         app.search();
-                        app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
+                        app.error_text =
+                            "Failed to execute ssh command.\nIs the OpenSSH-client installed?"
+                                .to_string();
                         app.show_import_popup = false;
                         app.show_error_popup = true;
                         app.app_mode = AppMode::Error;
@@ -103,22 +105,37 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
             KeyCode::Up | KeyCode::BackTab => app.focus_previous_field(),
             _ => match app.focus {
                 Focus::ServerNameField => {
-                    app.field_inputs.server_name_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .server_name_input
+                        .handle_event(&Event::Key(key));
                 }
                 Focus::GroupNameField => {
-                    app.field_inputs.group_name_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .group_name_input
+                        .handle_event(&Event::Key(key));
                 }
                 Focus::UsernameField => {
-                    app.field_inputs.username_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .username_input
+                        .handle_event(&Event::Key(key));
+                }
+                Focus::PasswordField => {
+                    app.field_inputs
+                        .password_input
+                        .handle_event(&Event::Key(key));
                 }
                 Focus::HostnameField => {
-                    app.field_inputs.hostname_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .hostname_input
+                        .handle_event(&Event::Key(key));
                 }
                 Focus::PortField => {
                     app.field_inputs.port_input.handle_event(&Event::Key(key));
                 }
                 Focus::OptionsField => {
-                    app.field_inputs.options_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .options_input
+                        .handle_event(&Event::Key(key));
                 }
                 _ => (),
             },
@@ -150,22 +167,37 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
             KeyCode::Up | KeyCode::BackTab => app.focus_previous_field(),
             _ => match app.focus {
                 Focus::ServerNameField => {
-                    app.field_inputs.server_name_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .server_name_input
+                        .handle_event(&Event::Key(key));
                 }
                 Focus::GroupNameField => {
-                    app.field_inputs.group_name_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .group_name_input
+                        .handle_event(&Event::Key(key));
                 }
                 Focus::UsernameField => {
-                    app.field_inputs.username_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .username_input
+                        .handle_event(&Event::Key(key));
+                }
+                Focus::PasswordField => {
+                    app.field_inputs
+                        .password_input
+                        .handle_event(&Event::Key(key));
                 }
                 Focus::HostnameField => {
-                    app.field_inputs.hostname_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .hostname_input
+                        .handle_event(&Event::Key(key));
                 }
                 Focus::PortField => {
                     app.field_inputs.port_input.handle_event(&Event::Key(key));
                 }
                 Focus::OptionsField => {
-                    app.field_inputs.options_input.handle_event(&Event::Key(key));
+                    app.field_inputs
+                        .options_input
+                        .handle_event(&Event::Key(key));
                 }
                 _ => (),
             },
@@ -190,10 +222,13 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                         parse::import_config(app);
                         app.show_import_popup = false;
                         app.app_mode = AppMode::Normal;
-                        app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
+                        app.scroll_state =
+                            app.scroll_state.content_length(app.ssh_connections.len());
                     } else {
                         app.search();
-                        app.error_text = "Failed to import ssh config.\nIs the OpenSSH-client installed?".to_string();
+                        app.error_text =
+                            "Failed to import ssh config.\nIs the OpenSSH-client installed?"
+                                .to_string();
                         app.show_import_popup = false;
                         app.show_error_popup = true;
                         app.app_mode = AppMode::Error;
@@ -245,7 +280,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                     app.connect(Some(app.run_input.to_string()));
                     return false;
                 } else {
-                    app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
+                    app.error_text =
+                        "Failed to execute ssh command.\nIs the OpenSSH-client installed?"
+                            .to_string();
                     app.show_run_popup = false;
                     app.show_error_popup = true;
                     app.app_mode = AppMode::Error;
@@ -275,7 +312,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                         app.connect(None);
                         return false;
                     } else {
-                        app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
+                        app.error_text =
+                            "Failed to execute ssh command.\nIs the OpenSSH-client installed?"
+                                .to_string();
                         app.show_import_popup = false;
                         app.show_error_popup = true;
                         app.app_mode = AppMode::Error;
@@ -283,7 +322,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 }
                 None => (),
             },
-            KeyCode::Char('e' | 'E' | 'у' | 'У') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            KeyCode::Char('e' | 'E' | 'у' | 'У')
+                if key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
                 match app.table_state.selected() {
                     Some(_) => {
                         app.search();
@@ -296,7 +337,9 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                     None => (),
                 }
             }
-            KeyCode::Char('r' | 'R' | 'к' | 'К') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            KeyCode::Char('r' | 'R' | 'к' | 'К')
+                if key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
                 match app.table_state.selected() {
                     Some(_) => {
                         app.app_mode = AppMode::RunCommand;

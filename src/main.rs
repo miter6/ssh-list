@@ -39,17 +39,19 @@ pub struct SSHConnection {
     server_name: String,
     group_name: String,
     username: String,
+    password: String,
     hostname: String,
     port: String,
     options: String,
 }
 
 impl SSHConnection {
-    const fn ref_array(&self) -> [&String; 6] {
+    const fn ref_array(&self) -> [&String; 7] {
         [
             &self.server_name,
             &self.group_name,
             &self.username,
+            &self.password,
             &self.hostname,
             &self.port,
             &self.options,
@@ -307,6 +309,7 @@ impl App {
             server_name: self.field_inputs.server_name_input.to_string(),
             group_name: self.field_inputs.group_name_input.to_string(),
             username: self.field_inputs.username_input.to_string(),
+            password: self.field_inputs.password_input.to_string(),
             hostname: self.field_inputs.hostname_input.to_string(),
             port: self.field_inputs.port_input.to_string(),
             options: self.field_inputs.options_input.to_string(),
@@ -369,6 +372,7 @@ impl App {
             server_name: self.field_inputs.server_name_input.to_string(),
             group_name: self.field_inputs.group_name_input.to_string(),
             username: self.field_inputs.username_input.to_string(),
+            password: self.field_inputs.password_input.to_string(),
             hostname: self.field_inputs.hostname_input.to_string(),
             port: self.field_inputs.port_input.to_string(),
             options: self.field_inputs.options_input.to_string(),
@@ -399,7 +403,8 @@ impl App {
         self.focus = match self.focus {
             Focus::ServerNameField => Focus::GroupNameField,
             Focus::GroupNameField => Focus::UsernameField,
-            Focus::UsernameField => Focus::HostnameField,
+            Focus::UsernameField => Focus::PasswordField,
+            Focus::PasswordField => Focus::HostnameField,
             Focus::HostnameField => Focus::PortField,
             Focus::PortField => Focus::OptionsField,
             Focus::OptionsField => Focus::OptionsField,
@@ -412,7 +417,8 @@ impl App {
             Focus::ServerNameField => Focus::ServerNameField,
             Focus::GroupNameField => Focus::ServerNameField,
             Focus::UsernameField => Focus::GroupNameField,
-            Focus::HostnameField => Focus::UsernameField,
+            Focus::PasswordField => Focus::UsernameField,
+            Focus::HostnameField => Focus::PasswordField,
             Focus::PortField => Focus::HostnameField,
             Focus::OptionsField => Focus::PortField,
             _ => Focus::ServerNameField,
@@ -623,7 +629,7 @@ fn read_appconfig() -> AppConfig {
 }
 
 pub fn popup_area(area: Rect) -> Rect {
-    let vertical = Layout::vertical([Constraint::Length(21)]).flex(Flex::Center);
+    let vertical = Layout::vertical([Constraint::Length(24)]).flex(Flex::Center);
     let horizontal = Layout::horizontal([Constraint::Length(40)]).flex(Flex::Center);
     let [area] = vertical.areas(area);
     let [area] = horizontal.areas(area);

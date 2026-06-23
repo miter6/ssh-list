@@ -1,15 +1,23 @@
 use crate::*;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Layout, Margin, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::Text,
     widgets::{
-        Block, BorderType, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table,
+        Block, BorderType, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar,
+        ScrollbarOrientation, Table,
     },
-    Frame,
 };
 
-pub fn render_input(app: &App, frame: &mut Frame, area: Rect, title: &str, selected_input: &Input, focused: Focus) {
+pub fn render_input(
+    app: &App,
+    frame: &mut Frame,
+    area: Rect,
+    title: &str,
+    selected_input: &Input,
+    focused: Focus,
+) {
     let width = area.width.max(3) - 3;
     let scroll = selected_input.visual_scroll(width as usize);
     let input = Paragraph::new(selected_input.value())
@@ -30,7 +38,9 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
         _ => "",
     };
 
-    let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
+    let popup_block = Block::bordered()
+        .title(title_text)
+        .title_alignment(Alignment::Center);
     let area = popup_area(area);
     let inner = popup_block.inner(area);
     frame.render_widget(Clear, area);
@@ -38,6 +48,7 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
 
     let vertical_popup = &Layout::vertical([
         Constraint::Length(1),
+        Constraint::Max(3),
         Constraint::Max(3),
         Constraint::Max(3),
         Constraint::Max(3),
@@ -119,9 +130,13 @@ pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
         AppMode::Import => "[I] import | [Esc] back",
         AppMode::Error => "[Esc] back",
         AppMode::RunCommand => "[Enter] run command | [Esc] back",
-        AppMode::Search => "[Enter] connect | [Ctrl+R] run | [Ctrl+E] edit | [Del] delete | [Esc] back",
+        AppMode::Search => {
+            "[Enter] connect | [Ctrl+R] run | [Ctrl+E] edit | [Del] delete | [Esc] back"
+        }
         AppMode::Options => "[↑][↓] height | [Esc] back",
-        AppMode::Sort => "[n] name | [g] group | [u] username | [h] hostname | [p] port | [Esc] back",
+        AppMode::Sort => {
+            "[n] name | [g] group | [u] username | [h] hostname | [p] port | [Esc] back"
+        }
     };
     let info_footer = Paragraph::new(footer_text)
         .style(Style::new().fg(Color::White).bg(Color::Black))
@@ -164,6 +179,12 @@ fn get_constraint(app: &App) -> Vec<Constraint> {
         .map(|i| i.username.len() + 1)
         .max()
         .unwrap_or(0);
+    let password_len = app
+        .ssh_connections
+        .iter()
+        .map(|i| i.password.len() + 1)
+        .max()
+        .unwrap_or(0);
     let hostname_len = app
         .ssh_connections
         .iter()
@@ -175,6 +196,7 @@ fn get_constraint(app: &App) -> Vec<Constraint> {
         Constraint::Length(server_name_len.clamp(10, 50) as u16),
         Constraint::Length(group_name_len.clamp(10, 50) as u16),
         Constraint::Length(username_len.clamp(10, 50) as u16),
+        Constraint::Length(password_len.clamp(10, 50) as u16),
         Constraint::Length(hostname_len.clamp(10, 50) as u16),
         Constraint::Length(7), //port
         Constraint::Min(1),    //options
@@ -183,13 +205,23 @@ fn get_constraint(app: &App) -> Vec<Constraint> {
 
 pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
     let header_style = Style::default().fg(Color::Gray).bg(Color::Indexed(235));
-    let selected_row_style = Style::default().add_modifier(Modifier::REVERSED).fg(Color::Yellow);
-    let header = [" Name", " Group", " Username", " Password", " Hostname", " Port", " Options"]
-        .into_iter()
-        .map(Cell::from)
-        .collect::<Row>()
-        .style(header_style)
-        .height(1);
+    let selected_row_style = Style::default()
+        .add_modifier(Modifier::REVERSED)
+        .fg(Color::Yellow);
+    let header = [
+        " Name",
+        " Group",
+        " Username",
+        " Password",
+        " Hostname",
+        " Port",
+        " Options",
+    ]
+    .into_iter()
+    .map(Cell::from)
+    .collect::<Row>()
+    .style(header_style)
+    .height(1);
     let mut rows = Vec::new();
     if app.app_mode == AppMode::Normal
         || app.app_mode == AppMode::New
@@ -255,7 +287,9 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 
 pub fn render_config_popup(frame: &mut Frame, area: Rect) {
     let title_text = " SSH Config Import ";
-    let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
+    let popup_block = Block::bordered()
+        .title(title_text)
+        .title_alignment(Alignment::Center);
     let area = config_popup_area(area);
     let inner = popup_block.inner(area);
     frame.render_widget(Clear, area);
@@ -273,17 +307,24 @@ pub fn render_config_popup(frame: &mut Frame, area: Rect) {
         "Press [I] to import connections from:\n{}",
         parse::get_sshconfig_path().display()
     );
-    let info_footer = Paragraph::new(text1).style(Style::new().fg(Color::White)).centered();
+    let info_footer = Paragraph::new(text1)
+        .style(Style::new().fg(Color::White))
+        .centered();
     frame.render_widget(info_footer, rects_popup[1]);
 
-    let text2 = "The username, password, hostname, port, and \nnon-default options will be imported";
-    let info_footer = Paragraph::new(text2).style(Style::new().fg(Color::White)).centered();
+    let text2 =
+        "The username, password, hostname, port, and \nnon-default options will be imported";
+    let info_footer = Paragraph::new(text2)
+        .style(Style::new().fg(Color::White))
+        .centered();
     frame.render_widget(info_footer, rects_popup[3]);
 }
 
 pub fn render_error_popup(frame: &mut Frame, area: Rect, error_text: String) {
     let title_text = " Error ";
-    let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
+    let popup_block = Block::bordered()
+        .title(title_text)
+        .title_alignment(Alignment::Center);
     let area = error_popup_area(area);
     let inner = popup_block.inner(area);
     frame.render_widget(Clear, area);
@@ -293,7 +334,9 @@ pub fn render_error_popup(frame: &mut Frame, area: Rect, error_text: String) {
     let rects_popup = vertical_popup.split(inner);
 
     let text1 = format!("{}", error_text);
-    let info_footer = Paragraph::new(text1).style(Style::new().fg(Color::White)).centered();
+    let info_footer = Paragraph::new(text1)
+        .style(Style::new().fg(Color::White))
+        .centered();
     frame.render_widget(info_footer, rects_popup[1]);
 }
 
@@ -327,7 +370,9 @@ pub fn render_search(app: &mut App, frame: &mut Frame, area: Rect) {
 
 pub fn render_options_popup(frame: &mut Frame, area: Rect) {
     let title_text = " Options ";
-    let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
+    let popup_block = Block::bordered()
+        .title(title_text)
+        .title_alignment(Alignment::Center);
     let area = options_popup_area(area);
     let inner = popup_block.inner(area);
     frame.render_widget(Clear, area);
@@ -337,6 +382,8 @@ pub fn render_options_popup(frame: &mut Frame, area: Rect) {
     let rects_popup = vertical_popup.split(inner);
 
     let text = format!("Press [↑] or [↓] to change row height");
-    let info_footer = Paragraph::new(text).style(Style::new().fg(Color::White)).centered();
+    let info_footer = Paragraph::new(text)
+        .style(Style::new().fg(Color::White))
+        .centered();
     frame.render_widget(info_footer, rects_popup[1]);
 }
