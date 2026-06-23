@@ -335,14 +335,6 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 app.row_height = 1;
                 app.update_appconfig();
             }
-            KeyCode::Right => {
-                app.next_color();
-                app.update_appconfig();
-            }
-            KeyCode::Left => {
-                app.previous_color();
-                app.update_appconfig();
-            }
             _ => {}
         },
         AppMode::Sort => match key.code {

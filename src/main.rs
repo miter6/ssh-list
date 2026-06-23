@@ -5,14 +5,15 @@ mod ui;
 use crossterm::cursor::Show;
 use crossterm::execute;
 use ratatui::{
+    DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Flex, Layout, Rect},
     widgets::{ScrollbarState, TableState},
-    DefaultTerminal, Frame,
 };
 use serde::{Deserialize, Serialize};
 use shlex::split;
 use std::io::stdout;
+use std::net::ToSocketAddrs;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{env, fs};
@@ -23,7 +24,7 @@ fn main() -> std::io::Result<()> {
     let version_arg = "--version".to_string();
     let args: Vec<String> = env::args().collect();
     if args.last().unwrap() == &version_arg {
-        println!("ssh-list {}",version);
+        println!("ssh-list {}", version);
         return Ok(());
     }
 
@@ -60,6 +61,7 @@ pub struct FieldInputs {
     server_name_input: Input,
     group_name_input: Input,
     username_input: Input,
+    password_input: Input,
     hostname_input: Input,
     port_input: Input,
     options_input: Input,
@@ -67,7 +69,6 @@ pub struct FieldInputs {
 
 #[derive(Deserialize, Serialize, PartialEq, Default)]
 pub struct AppConfig {
-    color: Option<String>,
     row_height: Option<u16>,
 }
 
@@ -76,6 +77,7 @@ pub enum Focus {
     ServerNameField,
     GroupNameField,
     UsernameField,
+    PasswordField,
     HostnameField,
     PortField,
     OptionsField,
@@ -115,7 +117,6 @@ pub struct App {
     last_app_mode: AppMode,
     error_text: String,
     row_height: u16,
-    color: String,
 }
 
 impl App {
@@ -135,6 +136,7 @@ impl App {
                 server_name_input: Input::default(),
                 group_name_input: Input::default(),
                 username_input: Input::default(),
+                password_input: Input::default(),
                 hostname_input: Input::default(),
                 port_input: Input::default().with_value("22".to_string()),
                 options_input: Input::default(),
@@ -146,7 +148,6 @@ impl App {
             last_app_mode: AppMode::Normal,
             error_text: String::new(),
             row_height: 3,
-            color: "yellow".to_string(),
         }
     }
 
@@ -169,7 +170,11 @@ impl App {
 
     fn draw(&mut self, frame: &mut Frame) {
         let vertical = match self.app_mode {
-            AppMode::Search => Layout::vertical([Constraint::Min(5), Constraint::Length(3), Constraint::Length(3)]),
+            AppMode::Search => Layout::vertical([
+                Constraint::Min(5),
+                Constraint::Length(3),
+                Constraint::Length(3),
+            ]),
             AppMode::Normal => {
                 if self.ssh_connections.is_empty() {
                     Layout::vertical([Constraint::Min(5), Constraint::Length(3)])
@@ -219,10 +224,13 @@ impl App {
     }
 
     fn check_blank_config(&mut self) {
-        if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == true {
+        if self.ssh_connections == vec![]
+            && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == true
+        {
             self.show_edit_popup = true;
             self.app_mode = AppMode::New
-        } else if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == false
+        } else if self.ssh_connections == vec![]
+            && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == false
         {
             self.show_import_popup = true;
             self.app_mode = AppMode::Import
@@ -263,6 +271,11 @@ impl App {
 
     fn connect(&mut self, command: Option<String>) {
         if let Some(i) = self.get_row_index() {
+            let title = resolve_title_ip(
+                &self.ssh_connections[i].hostname,
+                &self.ssh_connections[i].port,
+            );
+            set_ghostty_title(&title);
             println!(
                 "Connecting to {} ({})...",
                 self.ssh_connections[i].server_name, self.ssh_connections[i].group_name
@@ -309,6 +322,7 @@ impl App {
             server_name_input: Input::default(),
             group_name_input: Input::default(),
             username_input: Input::default(),
+            password_input: Input::default(),
             hostname_input: Input::default(),
             port_input: Input::default().with_value("22".to_string()),
             options_input: Input::default(),
@@ -323,7 +337,11 @@ impl App {
             Err(text) => {
                 ratatui::restore();
                 execute!(stdout(), Show).ok();
-                eprintln!("Error writing to file {}: {}", get_config_path().display(), text);
+                eprintln!(
+                    "Error writing to file {}: {}",
+                    get_config_path().display(),
+                    text
+                );
                 std::process::exit(1);
             }
         };
@@ -339,8 +357,10 @@ impl App {
                 Input::default().with_value(self.ssh_connections[i].username.to_string());
             self.field_inputs.hostname_input =
                 Input::default().with_value(self.ssh_connections[i].hostname.to_string());
-            self.field_inputs.port_input = Input::default().with_value(self.ssh_connections[i].port.to_string());
-            self.field_inputs.options_input = Input::default().with_value(self.ssh_connections[i].options.to_string());
+            self.field_inputs.port_input =
+                Input::default().with_value(self.ssh_connections[i].port.to_string());
+            self.field_inputs.options_input =
+                Input::default().with_value(self.ssh_connections[i].options.to_string());
         };
     }
 
@@ -369,7 +389,8 @@ impl App {
 
     fn copy_connection(&mut self) {
         if let Some(i) = self.table_state.selected() {
-            self.ssh_connections.insert(i + 1, self.ssh_connections[i].clone());
+            self.ssh_connections
+                .insert(i + 1, self.ssh_connections[i].clone());
             self.update_config();
         };
     }
@@ -428,7 +449,10 @@ impl App {
         let search_input = self.search_input.to_string().to_lowercase();
         self.search_index.clear();
         for (index, connection) in self.ssh_connections.iter().enumerate() {
-            if connection.server_name.to_lowercase().contains(&search_input)
+            if connection
+                .server_name
+                .to_lowercase()
+                .contains(&search_input)
                 || connection.hostname.to_lowercase().contains(&search_input)
                 || connection.username.to_lowercase().contains(&search_input)
                 || connection.port.to_lowercase().contains(&search_input)
@@ -460,31 +484,6 @@ impl App {
 
     fn apply_appconfig(&mut self) {
         let appconfig = read_appconfig();
-        self.color = match appconfig.color {
-            Some(color) => {
-                if color == "red"
-                    || color == "green"
-                    || color == "yellow"
-                    || color == "blue"
-                    || color == "magenta"
-                    || color == "cyan"
-                    || color == "gray"
-                    || color == "darkgray"
-                    || color == "lightred"
-                    || color == "lightgreen"
-                    || color == "lightyellow"
-                    || color == "lightblue"
-                    || color == "lightmagenta"
-                    || color == "lightcyan"
-                    || color == "white"
-                {
-                    color
-                } else {
-                    "yellow".to_string()
-                }
-            }
-            None => "yellow".to_string(),
-        };
         if let Some(c) = appconfig.row_height {
             if c == 1 || c == 3 {
                 self.row_height = c;
@@ -494,7 +493,6 @@ impl App {
 
     pub fn update_appconfig(&mut self) {
         let appconfig = AppConfig {
-            color: Some(self.color.clone()),
             row_height: Some(self.row_height),
         };
         let toml = toml::to_string(&appconfig).unwrap();
@@ -502,74 +500,6 @@ impl App {
             Ok(_) => (),
             Err(_) => (),
         };
-    }
-
-    pub fn next_color(&mut self) {
-        if self.color == "yellow" {
-            self.color = "lightyellow".to_string()
-        } else if self.color == "lightyellow" {
-            self.color = "white".to_string()
-        } else if self.color == "white" {
-            self.color = "darkgray".to_string()
-        } else if self.color == "darkgray" {
-            self.color = "gray".to_string()
-        } else if self.color == "gray" {
-            self.color = "red".to_string()
-        } else if self.color == "red" {
-            self.color = "lightred".to_string()
-        } else if self.color == "lightred" {
-            self.color = "green".to_string()
-        } else if self.color == "green" {
-            self.color = "lightgreen".to_string()
-        } else if self.color == "lightgreen" {
-            self.color = "blue".to_string()
-        } else if self.color == "blue" {
-            self.color = "lightblue".to_string()
-        } else if self.color == "lightblue" {
-            self.color = "magenta".to_string()
-        } else if self.color == "magenta" {
-            self.color = "lightmagenta".to_string()
-        } else if self.color == "lightmagenta" {
-            self.color = "cyan".to_string()
-        } else if self.color == "cyan" {
-            self.color = "lightcyan".to_string()
-        } else if self.color == "lightcyan" {
-            self.color = "yellow".to_string()
-        }
-    }
-
-    pub fn previous_color(&mut self) {
-        if self.color == "yellow" {
-            self.color = "lightcyan".to_string()
-        } else if self.color == "lightcyan" {
-            self.color = "cyan".to_string()
-        } else if self.color == "cyan" {
-            self.color = "lightmagenta".to_string()
-        } else if self.color == "lightmagenta" {
-            self.color = "magenta".to_string()
-        } else if self.color == "magenta" {
-            self.color = "lightblue".to_string()
-        } else if self.color == "lightblue" {
-            self.color = "blue".to_string()
-        } else if self.color == "blue" {
-            self.color = "lightgreen".to_string()
-        } else if self.color == "lightgreen" {
-            self.color = "green".to_string()
-        } else if self.color == "green" {
-            self.color = "lightred".to_string()
-        } else if self.color == "lightred" {
-            self.color = "red".to_string()
-        } else if self.color == "red" {
-            self.color = "gray".to_string()
-        } else if self.color == "gray" {
-            self.color = "darkgray".to_string()
-        } else if self.color == "darkgray" {
-            self.color = "white".to_string()
-        } else if self.color == "white" {
-            self.color = "lightyellow".to_string()
-        } else if self.color == "lightyellow" {
-            self.color = "yellow".to_string()
-        }
     }
 
     pub fn sort(&mut self, column: String) {
@@ -586,9 +516,31 @@ impl App {
             "hostname" => self
                 .ssh_connections
                 .sort_by_key(|connection| connection.hostname.to_lowercase().clone()),
-            "port" => self.ssh_connections.sort_by_key(|connection| connection.port.parse::<u16>().unwrap_or_default().clone()),
+            "port" => self.ssh_connections.sort_by_key(|connection| {
+                connection.port.parse::<u16>().unwrap_or_default().clone()
+            }),
             _ => (),
         }
+    }
+}
+
+fn set_ghostty_title(title: &str) {
+    // Use osascript to set terminal title via AppleScript
+    let _ = Command::new("osascript")
+        .arg("/Users/miter/Documents/set_title.scpt")
+        .arg(title)
+        .output();
+}
+
+fn resolve_title_ip(hostname: &str, port: &str) -> String {
+    let port = port.parse::<u16>().unwrap_or(22);
+    let lookup = format!("{}:{}", hostname, port);
+    match lookup.to_socket_addrs() {
+        Ok(mut addrs) => addrs
+            .next()
+            .map(|addr| addr.ip().to_string())
+            .unwrap_or_else(|| hostname.to_string()),
+        Err(_) => hostname.to_string(),
     }
 }
 

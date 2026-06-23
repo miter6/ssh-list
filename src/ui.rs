@@ -8,7 +8,6 @@ use ratatui::{
     },
     Frame,
 };
-use std::str::FromStr;
 
 pub fn render_input(app: &App, frame: &mut Frame, area: Rect, title: &str, selected_input: &Input, focused: Focus) {
     let width = area.width.max(3) - 3;
@@ -75,6 +74,14 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
         app,
         frame,
         rects_popup[4],
+        " Password ",
+        &app.field_inputs.password_input,
+        Focus::PasswordField,
+    );
+    render_input(
+        app,
+        frame,
+        rects_popup[5],
         " Hostname (IP or Domain) ",
         &app.field_inputs.hostname_input,
         Focus::HostnameField,
@@ -82,7 +89,7 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
     render_input(
         app,
         frame,
-        rects_popup[5],
+        rects_popup[6],
         " Port ",
         &app.field_inputs.port_input,
         Focus::PortField,
@@ -90,7 +97,7 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
     render_input(
         app,
         frame,
-        rects_popup[6],
+        rects_popup[7],
         " SSH options (e.g., -D 1337) ",
         &app.field_inputs.options_input,
         Focus::OptionsField,
@@ -113,17 +120,16 @@ pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
         AppMode::Error => "[Esc] back",
         AppMode::RunCommand => "[Enter] run command | [Esc] back",
         AppMode::Search => "[Enter] connect | [Ctrl+R] run | [Ctrl+E] edit | [Del] delete | [Esc] back",
-        AppMode::Options => "[↑][↓] height | [←][→] color | [Esc] back",
+        AppMode::Options => "[↑][↓] height | [Esc] back",
         AppMode::Sort => "[n] name | [g] group | [u] username | [h] hostname | [p] port | [Esc] back",
     };
-    let app_color = Color::from_str(&app.color).unwrap_or(Color::Yellow);
     let info_footer = Paragraph::new(footer_text)
         .style(Style::new().fg(Color::White).bg(Color::Black))
         .centered()
         .block(
             Block::bordered()
                 .border_type(BorderType::Double)
-                .border_style(Style::new().fg(app_color)),
+                .border_style(Style::new().fg(Color::Yellow)),
         );
     frame.render_widget(info_footer, area);
 }
@@ -176,10 +182,9 @@ fn get_constraint(app: &App) -> Vec<Constraint> {
 }
 
 pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
-    let app_color = Color::from_str(&app.color).unwrap_or(Color::Yellow);
     let header_style = Style::default().fg(Color::Gray).bg(Color::Indexed(235));
-    let selected_row_style = Style::default().add_modifier(Modifier::REVERSED).fg(app_color);
-    let header = [" Name", " Group", " Username", " Hostname", " Port", " Options"]
+    let selected_row_style = Style::default().add_modifier(Modifier::REVERSED).fg(Color::Yellow);
+    let header = [" Name", " Group", " Username", " Password", " Hostname", " Port", " Options"]
         .into_iter()
         .map(Cell::from)
         .collect::<Row>()
@@ -271,7 +276,7 @@ pub fn render_config_popup(frame: &mut Frame, area: Rect) {
     let info_footer = Paragraph::new(text1).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[1]);
 
-    let text2 = "The username, hostname, port, and \nnon-default options will be imported";
+    let text2 = "The username, password, hostname, port, and \nnon-default options will be imported";
     let info_footer = Paragraph::new(text2).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[3]);
 }
@@ -331,7 +336,7 @@ pub fn render_options_popup(frame: &mut Frame, area: Rect) {
     let vertical_popup = &Layout::vertical([Constraint::Length(1), Constraint::Length(3)]);
     let rects_popup = vertical_popup.split(inner);
 
-    let text = format!("Press [↑] or [↓] to change row height\n\nPress [←] or [→] to change color     ");
+    let text = format!("Press [↑] or [↓] to change row height");
     let info_footer = Paragraph::new(text).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[1]);
 }
